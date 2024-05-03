@@ -1,0 +1,9 @@
+<launch>
+    <include file="$(find nav_launch_pkg)/launch/depthimage2laserscan.launch" />
+
+    <include file="$(find nav_launch_pkg)/launch/gmappingrgbd.launch" />
+
+    <include file="$(find nav_launch_pkg)/launch/move_base_activate.launch" />
+
+    <node pkg="nav_launch_pkg" type="transmit_chassis_node" name="transmit_chassis_node" output="screen" />
+</launch>

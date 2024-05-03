@@ -1,0 +1,14 @@
+<launch>
+
+    <node pkg="move_base_user" type="move_base" respawn="false" name="move_base" output="screen" clear_params="true">
+        <rosparam file="$(find nav_launch_pkg)/config/move_base_config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find nav_launch_pkg)/config/move_base_config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find nav_launch_pkg)/config/move_base_config/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find nav_launch_pkg)/config/move_base_config/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find nav_launch_pkg)/config/move_base_config/base_local_planner_params.yaml" command="load" />
+    </node>
+
+    <node pkg="tf" type="static_transform_publisher" name="MapTransPublisher" args="0 0 0 0 0 0 /base_link /map 1000"/>
+    <node pkg="tf" type="static_transform_publisher" name="OdomTransPublisher" args="0 0 0 0 0 0 /base_link /odom 1000"/>
+
+</launch>
