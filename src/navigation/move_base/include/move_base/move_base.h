@@ -203,7 +203,7 @@ namespace move_base {
       /* The custom program Started */
       ros::Publisher   take_off_pub_;       // 地面机器人部分认为自己卡住，发布起飞指令
       ros::Subscriber  system_reset_sub_;   // 四旋翼已满足降落条件，降落复位move_base
-
+      geometry_msgs::PoseStamped cur_goal_;
       void system_reset_callback(const geometry_msgs::Quaternion::ConstPtr &cmd);
       /* The custom program Ended */
 

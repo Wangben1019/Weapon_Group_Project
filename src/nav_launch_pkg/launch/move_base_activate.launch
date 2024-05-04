@@ -6,6 +6,12 @@
         <rosparam file="$(find nav_launch_pkg)/config/move_base_config/local_costmap_params.yaml" command="load" />
         <rosparam file="$(find nav_launch_pkg)/config/move_base_config/global_costmap_params.yaml" command="load" />
         <rosparam file="$(find nav_launch_pkg)/config/move_base_config/base_local_planner_params.yaml" command="load" />
+        <param name="planner_patience" type="double" value="5.0" />
+        <param name="controller_patience" type="double" value="15.0" />
+        <param name="oscillation_timeout" type="double" value="0.0" />
+        <param name="oscillation_distance" type="double" value="0.5" />
+        <param name="max_planning_retries" type="int" value="-1" />
+        <param name="recovery_behavior_enabled" type="bool" value="true" />
     </node>
 
     <node pkg="tf" type="static_transform_publisher" name="MapTransPublisher" args="0 0 0 0 0 0 /base_link /map 1000"/>
