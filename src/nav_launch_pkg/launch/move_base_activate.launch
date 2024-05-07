@@ -12,9 +12,12 @@
         <param name="oscillation_distance" type="double" value="0.5" />
         <param name="max_planning_retries" type="int" value="-1" />
         <param name="recovery_behavior_enabled" type="bool" value="true" />
+        <param name="base_global_planner" value="global_planner/GlobalPlanner" />
+        <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+
     </node>
 
-    <node pkg="tf" type="static_transform_publisher" name="MapTransPublisher" args="0 0 0 0 0 0 /base_link /map 1000"/>
-    <node pkg="tf" type="static_transform_publisher" name="OdomTransPublisher" args="0 0 0 0 0 0 /base_link /odom 1000"/>
+    <!-- <node pkg="tf" type="static_transform_publisher" name="MapTransPublisher" args="0 0 0 0 0 0 /base_link /map 1000"/> -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="OdomTransPublisher" args="0 0 0 0 0 0 /base_link /odom 1000"/> -->
 
 </launch>

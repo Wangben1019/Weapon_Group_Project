@@ -34,11 +34,12 @@ geometry_msgs::Quaternion reset_system;         // 重置move_base状态机，�
 geometry_msgs::PoseStamped pub_goal_after_reset;// 若落地后仍需车移动。发布goal point给move_base
 sensor_msgs::Range lidar_info;                  // 激光雷达消息
 sensor_msgs::Range lidar_info_last;             // 激光雷达上一帧消息
+ros::Publisher pub_uav_pose;
 
 double flight_dis_x_thre;               // 飞行距离阈值，若起飞时距离目标点的距离小于该阈值，则直接飞到目标点后降落
 double flight_dis_y_thre;
 bool Need_Lookout = true;               // 是否需要程序监视飞机的降落，当他为true时证明无人机距目标点的距离大于上述阈值
-UAV_State_e UAV_State;                  // 无人机的飞行状态：起飞/着陆
+UAV_State_e UAV_State = Land ;                  // 无人机的飞行状态：起飞/着陆
 UAV_State_e UAV_State_Last;             // 无人机的上一帧飞行状态
 bool uav_first_take_off = false;        // 无人机再一次运动循环内首次起飞标志位，为true的话，证明无人机已经完成从着陆到起飞的状态变化
 float lidar_range_max;                  // 雷达探测距离的最大值，被认为是起飞到最高点时距离平地的距离，用作判断是否越过障碍物
@@ -50,6 +51,8 @@ int Lidar_Data_Filter_num = 10;        // 采集无人机在地面上时雷达�
 float Lidar_LandRange;                  // 无人机在地面上时雷达探测的距离
 // bool get_Lidar_LandRange_flag = true;   // 无人机采集在地面上时雷达探测的距离的标志位，每次着陆，或者当开机时，应为true，采集数据
 // int skip_num_get_RangeMax = 10;
+
+double Flown_Over_Obstacles_Odom_X;
 
 void goal_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
@@ -94,10 +97,12 @@ void uav_state_cb(const std_msgs::UInt8::ConstPtr &msg)
     if (msg->data == 1) 
     {
         UAV_State = TakeOff;
+        ROS_INFO("UAV state take off");
     }
     else if(msg->data == 2)
     {
         UAV_State = Land;
+        ROS_INFO("UAV state land");
     }
     else
     {
@@ -108,6 +113,7 @@ void uav_state_cb(const std_msgs::UInt8::ConstPtr &msg)
     if (UAV_State_Last == Land && UAV_State == TakeOff) 
     {
         uav_first_take_off = true;
+        ROS_INFO("UAV state from land to Take off");
     }
 }
 
@@ -116,6 +122,10 @@ void lidar_msg_cb(const sensor_msgs::Range::ConstPtr &msg)
     static int cnt_min;
     static int cnt_max;
     static int cnt_obs;
+    static int cnt_end;
+    static float maybe_max;
+    static bool get_maybe_max_flag = false;
+    static float Above_Obstacles_range;
     lidar_info_last = lidar_info;
     UAV_Fight_Schedule_last = UAV_Fight_Schedule;
     lidar_info = *msg;
@@ -132,22 +142,33 @@ void lidar_msg_cb(const sensor_msgs::Range::ConstPtr &msg)
         }
     }
 
-    if(UAV_State == TakeOff)
+    if(UAV_State == TakeOff && UAV_Fight_Schedule != Flown_Over_Obstacles)
     {
+        // if(lidar_info.range >= lidar_info_last.range && lidar_info.range >= lidar_range_max)
+        // {
+        //     if(!get_maybe_max_flag)
+        //     {
+        //         maybe_max = lidar_info.range;
+        //         get_maybe_max_flag = true;    
+        //     }
+        // }
         
-        if(lidar_info.range >= lidar_info_last.range)
+        if(lidar_info.range > lidar_range_max)
         {
             cnt_max++;
             if(cnt_max > Lidar_Data_Filter_num)
             {
                 UAV_Fight_Schedule = Prepare_Over_Obstacles;
                 lidar_range_max = lidar_info.range;
+                ROS_INFO("\033[1;32m----> UAV is on the rise, the lidar max range is %f.\033[0m", lidar_range_max);
                 cnt_max = 0;
+                // get_maybe_max_flag = false;
             }
         }
         else
         {
             cnt_max = 0;
+            // get_maybe_max_flag = false;
             /* 如果距离地面的高度的Obstacles_Proportion_Thre倍，仍然小于当前探测高度，则证明已经在障碍物上空 */
             if((lidar_info.range / lidar_range_max) < Obstacles_Proportion_Thre)
             {
@@ -155,6 +176,9 @@ void lidar_msg_cb(const sensor_msgs::Range::ConstPtr &msg)
                 if(cnt_obs > Lidar_Data_Filter_num)
                 {
                     UAV_Fight_Schedule = Above_Obstacles;
+                    Above_Obstacles_range = lidar_info.range;
+                    ROS_INFO("\033[1;32m----> UAV is above obstacles, because now range is less than max range,lidar_range_max is : %f .\033[0m", lidar_range_max);
+                    // lidar_range_max = 0;
                     cnt_obs = 0;
                 }
             }
@@ -165,9 +189,24 @@ void lidar_msg_cb(const sensor_msgs::Range::ConstPtr &msg)
         }
     }
 
-    if(UAV_Fight_Schedule_last == Above_Obstacles && UAV_Fight_Schedule == Prepare_Over_Obstacles)
+    if(UAV_Fight_Schedule_last == Above_Obstacles && (lidar_info.range /  lidar_range_max) > Obstacles_Proportion_Thre)
     {
-        UAV_Fight_Schedule = Flown_Over_Obstacles;
+        cnt_end++;
+        if(cnt_end > Lidar_Data_Filter_num)
+        {
+            UAV_Fight_Schedule = Flown_Over_Obstacles;
+            Flown_Over_Obstacles_Odom_X = vin_odom_Info.pose.pose.position.x;
+            geometry_msgs::Point uav_goal__;
+            uav_goal__.x = Flown_Over_Obstacles_Odom_X + 2;
+            uav_goal__.y = vin_odom_Info.pose.pose.position.y;
+            uav_goal__.z = vin_odom_Info.pose.pose.position.z;
+            pub_uav_pose.publish(uav_goal__);
+             ROS_INFO("\033[1;32m----> UAV has flown over obstacles .\033[0m");
+        }
+    }
+    else 
+    {
+        cnt_end = 0;
     }
     
 }
@@ -196,7 +235,7 @@ int main(int argc, char *argv[])
     ros::Subscriber sub_lidar_mavros = nh.subscribe("/mavros/distance_sensor/hrlv_ez4_pub", 5, lidar_msg_cb);
 
     /* 发布无人机的目标点 */
-    ros::Publisher pub_uav_pose = nh.advertise<geometry_msgs::Point>("/uav_goal_point", 5);
+    pub_uav_pose = nh.advertise<geometry_msgs::Point>("/uav_goal_point", 5);
     /* 发布无人机的起飞/降落指令 */
     ros::Publisher pub_takeoff_land = nh.advertise<std_msgs::UInt8>("/uav_takeoff_land", 5);
     /* 发布话题重置move_base状态机 */
@@ -236,13 +275,25 @@ int main(int argc, char *argv[])
         {
             if(UAV_Fight_Schedule == Flown_Over_Obstacles)
             {
-                std_msgs::UInt8 cmd;
-                cmd.data = 2;
-                pub_takeoff_land.publish(cmd);
+                // Flown_Over_Obstacles_Odom_X
+                if (vin_odom_Info.pose.pose.position.x > (Flown_Over_Obstacles_Odom_X + 1))
+                {
+                    // geometry_msgs::Point uav_goal_temp;
+                    // uav_goal_temp.x = vin_odom_Info.pose.pose.position.x;
+                    // uav_goal_temp.y = vin_odom_Info.pose.pose.position.y;
+                    // uav_goal_temp.z = vin_odom_Info.pose.pose.position.z;
+                    // pub_uav_pose.publish(uav_goal_temp);
+
+                    std_msgs::UInt8 cmd;
+                    cmd.data = 2;
+                    pub_takeoff_land.publish(cmd);
+                }
+                
             }
 
             if (uav_first_take_off && UAV_State == Land) 
             {
+                ROS_INFO("\033[1;32m----> UAV has land ! \033[0m");
                 /* 重置代价地图 */
                 std_srvs::Empty empty;
                 bool retu = client_empty.call(empty);
@@ -263,6 +314,7 @@ int main(int argc, char *argv[])
                 uav_first_take_off = false;
                 // get_Lidar_LandRange_flag = true;
                 UAV_Fight_Schedule = Prepare_Over_Obstacles;
+                lidar_range_max = 0;
             }
         }
         /* 不需要手动监视，到达目标点自动落地 */
@@ -271,6 +323,7 @@ int main(int argc, char *argv[])
             /* 不需要监视到达目的地后降落，则代表已经到达目标点 */
             if (uav_first_take_off && UAV_State == Land) 
             {
+                ROS_INFO("\033[1;32m----> UAV has land ! \033[0m");
                 /* 重置代价地图 */
                 std_srvs::Empty empty;
                 bool retu = client_empty.call(empty);
@@ -289,6 +342,7 @@ int main(int argc, char *argv[])
                 uav_first_take_off = false;
                 // get_Lidar_LandRange_flag = true;
                 UAV_Fight_Schedule = Prepare_Over_Obstacles;
+                lidar_range_max  = 0;
             }
         }
         

@@ -12,8 +12,8 @@ void Cmd_Vel_Callback(const geometry_msgs::Twist::ConstPtr &msg)
     VCOMCOMM vcom_user;
     QByteArray serial_data_user;
 
-    Expect_Speed.Forward_Back_Remote = msg->linear.x;
-    Expect_Speed.Rotate_Remote = msg->angular.z;
+    Expect_Speed.Forward_Back_Remote = msg->linear.x * 5;
+    Expect_Speed.Rotate_Remote = -msg->angular.z * 0.925925926;
 
     serial_data_user.append((char *)&Expect_Speed, sizeof(Expect_Speed_Typedef));
 

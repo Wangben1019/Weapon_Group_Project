@@ -1,8 +1,16 @@
 <launch>
     <!-- //laser的topic名称，与自己的激光的topic相对应  -->
     <arg name="scan_topic"  default="/scan" /> 
-    <arg name="base_frame"  default="/base_link"/>
-    <arg name="odom_frame"  default="/odom"/>
+    <arg name="base_frame"  default="/base_link_nav"/>
+    <arg name="odom_frame"  default="/odom_nav"/>
+
+     <!-- <node pkg="tf" type="static_transform_publisher" name="CameraTransPublisher" args="0 0 0 0 0 0 map base_link 1000"/> -->
+     <node pkg="tf" type="static_transform_publisher" name="CameraTransPublisher" args="0  0.05 0.1 0 0 0 base_link_nav camera_link  1000"/>
+     <!-- <node pkg="tf" type="static_transform_publisher" name="CameraTransPublisher" args="0  -0.05 -0.1 0 0 0 laser_nav base_link_nav   1000"/> -->
+     <!-- <node pkg="tf" type="static_transform_publisher" name="laserTransPublisher" args="0 0 0 0 0 0 laser_nav camera_link  1000"/> -->
+     <node pkg="tf" type="static_transform_publisher" name="OdomTransPublisher" args="0 0 0 0 0 0 odom_nav world 1000"/>
+     <node pkg="tf" type="static_transform_publisher" name="Odom1TransPublisher" args="0 0 0 0 0 0 base_link_nav base_link 1000"/>
+     <node pkg="tf" type="static_transform_publisher" name="Odom2TransPublisher" args="0 0 0 0 0 0 odom_nav odom 1000"/>
 
     <!-- <node pkg="vins" type="vins_node" name="vins_node" output="screen" args="/home/wang/vision_nav_ws/src/VINS-Fusion/config/realsense_d435i/realsense_stereo_imu_config.yaml" /> -->
  
@@ -12,12 +20,12 @@
         <param name="base_frame" value="$(arg base_frame)"/>
         <param name="odom_frame" value="$(arg odom_frame)"/>
         <!-- //地图更新的一个间隔，两次scanmatch的间隔，地图更新也受scanmach的影响，如果scanmatch没有成功的话，是不会更新地图的 -->
-        <param name="map_update_interval" value="0.01"/>
+        <param name="map_update_interval" value="5"/>
         <!-- //set maxUrange < maximum range of the real sensor <= maxRange -->
-        <param name="maxUrange" value="4.0"/>
+        <param name="maxUrange" value="4.5"/>
         <param name="maxRange" value="5.0"/>
         <param name="sigma" value="0.05"/>
-        <param name="kernelSize" value="3"/>
+        <param name="kernelSize" value="1"/>
         <!-- optimize机器人移动的初始值（距离） -->
         <param name="lstep" value="0.05"/>
         <!-- //optimize机器人移动的初始值（角度） -->
@@ -29,20 +37,23 @@
         <!-- //为0,表示所有的激光都处理，尽可能为零，如果计算压力过大，可以改成1 -->
         <param name="lskip" value="0"/>
         <!-- //很重要，判断scanmatch是否成功的阈值，过高的话会使scanmatch失败，从而影响地图更新速率 -->
-        <param name="minimumScore" value="30"/>
+        <param name="minimumScore" value="0"/>
         <!-- //以下四个参数是运动模型的噪声参数 -->
         <param name="srr" value="0.01"/>
         <param name="srt" value="0.02"/>
         <param name="str" value="0.01"/>
         <param name="stt" value="0.02"/>
         <!-- //机器人移动linearUpdate距离，进行scanmatch -->
-        <param name="linearUpdate" value="0.05"/>
+        <!-- <param name="linearUpdate" value="0.5"/> -->
+        <param name="linearUpdate" value="1.0"/>
         <!-- 机器人选装angularUpdate角度，进行scanmatch -->
-        <param name="angularUpdate" value="0.0436"/>
+        <!-- <param name="angularUpdate" value="0.0436"/> -->
+        <param name="angularUpdate" value="0.5"/>
         <param name="temporalUpdate" value="-1.0"/>
         <param name="resampleThreshold" value="0.5"/>
         <!-- //很重要，粒子个数 -->
-        <param name="particles" value="8"/>
+        <!-- <param name="particles" value="8"/> -->
+        <param name="particles" value="30"/>
         <!--
         <param name="xmin" value="-50.0"/>
         <param name="ymin" value="-50.0"/>
@@ -63,11 +74,13 @@
         <remap from="scan" to="$(arg scan_topic)"/>
     </node>
 
-    <node pkg="tf" type="static_transform_publisher" name="CameraTransPublisher" args="0 0 0 0 0 0 /camera_link /base_link 1000"/>
+   
 
-    <node pkg="tf" type="static_transform_publisher" name="VinsTransPublisher" args="0 0 0 0 0 0 /camera /camera_link 1000"/>
+    <!-- <node pkg="tf" type="static_transform_publisher" name="MapBaseTransPublisher" args="0 0 0 0 0 0 /base_link /map 1000"/> -->
 
-    <node pkg="tf" type="static_transform_publisher" name="MapTransPublisher" args="0 0 0 0 0 0 /world /map 1000"/>
+    <!-- <node pkg="tf" type="static_transform_publisher" name="VinsTransPublisher" args="0 0 0 0 0 0 /camera /camera_link 1000"/> -->
+
+    <!-- <node pkg="tf" type="static_transform_publisher" name="MapTransPublisher" args="0 0 0 0 0 0 /world /map 1000"/> -->
 
     <node pkg="nav_launch_pkg" type="receive_odom" name="receive_odom" output="screen" />
 

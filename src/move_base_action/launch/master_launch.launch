@@ -2,8 +2,8 @@
     <node pkg="move_base_action" type="master_chassis_control" name="master_chassis_control" output="screen" >
         <param name="flight_dis_x_thre" type="double" value="3" />
         <param name="flight_dis_y_thre" type="double" value="1.5" />
-        <param name="Lidar_Data_Filter_num" type="int" value="10" />
-        <param name="Obstacles_Proportion_Thre" type="float" value="0.8" />
+        <param name="Lidar_Data_Filter_num" type="int" value="3" />
+        <param name="Obstacles_Proportion_Thre" type="double" value="0.8" />
     </node>
 
 

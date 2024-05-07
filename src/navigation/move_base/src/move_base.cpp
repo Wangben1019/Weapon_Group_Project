@@ -87,7 +87,7 @@ namespace move_base {
     private_nh.param("make_plan_clear_costmap", make_plan_clear_costmap_, true);
     private_nh.param("make_plan_add_unreachable_goal", make_plan_add_unreachable_goal_, true);
     
-    ROS_INFO("\033[1;31m get param finish \033[0m");
+    // ROS_INFO("\033[1;31m get param finish \033[0m");
     //set up plan triple buffer
     planner_plan_ = new std::vector<geometry_msgs::PoseStamped>();
     latest_plan_ = new std::vector<geometry_msgs::PoseStamped>();
